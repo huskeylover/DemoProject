@@ -71,19 +71,29 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 // Fetch To-Dos
 const token = localStorage.getItem('token');
 if (token) {
-    fetch('http://localhost:3000/public/todos.html', {
+    fetch('http://localhost:3000/todos', {
         headers: {'Authorization': `Bearer ${token}` },
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to fetch to-dos: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         const todoList = document.getElementById('todoList');
+        todoList.innerHTML = ''; // Clearing existing to-dos
         data.forEach(todo => {
             const li = document.createElement('li');
             li.textContent = todo.task;
-            todoList.appendChild(li);  
+            todoList.appendChild(li);
         });
     })
-    .catch(err => console.error('Error fetching to-dos', err));
+    .catch(err => {
+        console.error('Error fetching to-dos: ', err);
+        alert('Error fetching to-dos. Please try again.');
+        console.log('Token', token);
+    });
 } else {
     window.location.href = 'index.html'; // Redirect to login if no token
 }
@@ -97,7 +107,7 @@ document.getElementById('todoForm')?.addEventListener('submit', async (e) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': token,
+            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ task }),
     });
@@ -109,6 +119,7 @@ document.getElementById('todoForm')?.addEventListener('submit', async (e) => {
        todoList.appendChild(li);
        document.getElementById('task').value = ''; // Clear the input field
     } else {
-        alert('Error adding to-do'); 
+        alert('Error adding to-do', response.status); 
+        console.log('Token', token);
     }
 });

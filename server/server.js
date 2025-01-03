@@ -48,7 +48,7 @@ app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ username });
         if (user && await bcrypt.compare(password, user.password)) {
-            const token = jwt.sign({ userId: user._id }, 'secret_key');
+            const token = jwt.sign({ userId: user._id }, 'secret_key', { expiresIn: '1h' });
             res.json({ token });
         } else {
             res.status(401).send('Invalid credentials');
@@ -61,26 +61,36 @@ app.post('/login', async (req, res) => {
 // Protected Route: Get To-Dos
 app.get('/todos', async (req, res) => {
     const token = req.headers['authorization'];
+    console.log('Token Received:', token); // log the token
+    if (!token) {
+        return res.status(401).send('Unathorized: No token provided');
+    }
     try {
-        const decoded = jwt.verify(token, 'secret_key');
+        const decoded = jwt.verify(tokent.replace('Bearer ', ''), 'secret_key'); // Remove Bearer prefix
+        console.log('Decoded token:', decoded);
         const todos = await Todo.find({ user_id: decoded.userId });
         res.json(todos);
     } catch (err) {
-        res.status(401).send('Unathorized');
+        console.error('Error fetching to-dos:', err);
+        res.status(401).send('Unathorized: Invalid token');
     }
 });
 
 // Protected Route: Add To-Do
 app.post('/todos', async (req, res) => {
     const token = req.headers['authorization'];
+    if (!token) {
+        return res.status(401).send('Unathorized: No token provided');
+    }
     try {
-        const decoded = jwt.verify(token, 'secret_key');
+        const decoded = jwt.verify(token.replace('Bearer ', ''), 'secret_key');
         const { task } = req.body;
         const todo = new Todo({ user_id: decoded.userId, task, completed: false });
         await todo.save();
-        res.status(201).json(todo); // Return the new to-do
+        res.status(201).json(todo); // return new to-do
     } catch (err) {
-        res.status(500).send('Error adding to-do');
+        console.error('Error adding to-do', err);
+        res.status(500).send('Error adding to-do')
     }
 });
 
